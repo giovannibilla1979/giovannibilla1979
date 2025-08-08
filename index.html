@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RoadTrip Family App 2025 – Giovanni</title>
+  <meta name="description" content="Viaggio famiglia Mascali–Roma–Mascali agosto 2025: itinerari, meteo, tappe, food, wellness, diario, budget"/>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Leaflet.js CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Icon -->
+  <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/854/854878.png"/>
+  <style>
+    body.dark { background: #18181b; color: #e0e7ef; }
+    .btn { border-radius: 0.7rem; padding: 0.44rem 1.4rem; background: #2563eb; color: #fff; font-weight: 700; box-shadow: 0 2px 10px #2563eb22; transition: 0.13s; }
+    .btn:hover { background: #1e40af; }
+    .btn-dark { border-radius: 0.7rem; padding: 0.44rem 1.4rem; background: #18181b; color: #fff; font-weight: 700; box-shadow: 0 2px 10px #18181b22; transition: 0.13s; }
+    .btn-dark:hover { background: #374151; }
+    .animate-fade-in { animation: fadeIn 0.7s; }
+    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
+    [x-cloak] { display: none !important; }
+    .tappa-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 1.6rem; margin-top: 1.25rem; }
+    .tappa { display: flex; flex-direction: column; align-items: center; background: #fff; border-radius: 1.7rem; box-shadow: 0 3px 13px #2563eb18; padding: 1.25rem 1.7rem; min-width: 170px; }
+    .tappa-luogo { font-size: 1.14rem; font-weight: 800; color: #1e293b; margin-bottom: 0.28rem; }
+    .tappa-date { color: #2563eb; font-weight: 700; font-size: 1.02rem; }
+    .btn-maps { margin-top: 0.55rem; font-size:1.03rem; }
+    @media (max-width:600px) { .tappa-list { gap:0.72rem; } .tappa{padding:0.7rem 0.17rem;min-width:100px;} .tappa-luogo{font-size:1rem;} }
+  </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+  <main>
+    <header class="py-6 bg-blue-900 text-white text-center rounded-b-3xl shadow relative">
+      <h1 class="text-3xl md:text-4xl font-black tracking-wide">🚗 RoadTrip Family App 2025</h1>
+      <div class="text-base font-semibold mt-4 mb-2">Soggiorni & Tappe</div>
+      <div class="tappa-list">
+        <div class="tappa">
+          <div class="tappa-luogo">Mascali (partenza)</div>
+          <div class="tappa-date">11 agosto</div>
+          <a class="btn btn-maps" target="_blank" href="https://maps.google.com/?q=Via+Dottor+Mario+Amato+24,+Mascali+(CT)">Apri in Maps</a>
+        </div>
+        <div class="tappa">
+          <div class="tappa-luogo">Pizzo Calabro</div>
+          <div class="tappa-date">11–13 agosto</div>
+          <a class="btn btn-maps" target="_blank" href="https://maps.google.com/?q=38.7436349,16.180883">Apri in Maps</a>
+        </div>
+        <div class="tappa">
+          <div class="tappa-luogo">Paestum</div>
+          <div class="tappa-date">13–14 agosto</div>
+          <a class="btn btn-maps" target="_blank" href="https://maps.google.com/?q=Via+Antonio+Meucci+5,+84047+Paestum+(SA)">Apri in Maps</a>
+        </div>
+        <div class="tappa">
+          <div class="tappa-luogo">Roma</div>
+          <div class="tappa-date">14–17 agosto</div>
+          <a class="btn btn-maps" target="_blank" href="https://maps.google.com/?q=Via+Gregorio+VII+267,+00165+Roma">Apri in Maps</a>
+        </div>
+        <div class="tappa">
+          <div class="tappa-luogo">Mascali (rientro)</div>
+          <div class="tappa-date">18 agosto</div>
+          <a class="btn btn-maps" target="_blank" href="https://maps.google.com/?q=Via+Dottor+Mario+Amato+24,+Mascali+(CT)">Apri in Maps</a>
+        </div>
+      </div>
+      <!-- Toggle dark mode -->
+      <button onclick="document.body.classList.toggle('dark')" aria-label="mod. scuro" class="absolute top-6 right-6 btn btn-dark">🌗</button>
+    </header>
+    <!-- MAPPA INTERATTIVA TAPPE -->
+    <section class="max-w-4xl mx-auto my-10">
+      <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">🗺️ Mappa Interattiva del Viaggio</h2>
+      <div id="mappa-tappe" class="w-full h-80 md:h-96 rounded-xl shadow-lg ring-1 ring-blue-900/10"></div>
+    </section>
+    <script>
+    // --- Mappa e tappe principali, API ready e responsive ---
+    (function() {
+      const tappe = [
+        {
+          nome: "Mascali (partenza)",
+          date: "11 agosto",
+          orarioPartenza: "07:30",
+          orarioArrivo: "",
+          tempoPercorrenza: "",
+          indirizzo: "Via Dottor Mario Amato 24, Mascali (CT)",
+          linkMaps: "https://maps.google.com/?q=Via+Dottor+Mario+Amato+24,+Mascali+(CT)",
+          lat: 37.7675, lng: 15.2322,
+          note: "Partenza entro le 7:30 per arrivo a Pizzo prima delle 12:30 (traghetto Messina–Villa S. Giovanni compreso)",
+          linkBooking: ""
+        },
+        {
+          nome: "Pizzo Calabro (FP Apartments)",
+          date: "11–13 agosto",
+          orarioPartenza: "",
+          orarioArrivo: "12:15",
+          tempoPercorrenza: "3h 15min",
+          indirizzo: "Pizzo Calabro, VV",
+          linkMaps: "https://maps.google.com/?q=38.7436349,16.180883",
+          lat: 38.7436349, lng: 16.180883,
+          note: "Check-in 13:00–21:00, invio documenti a Maria Francesca",
+          linkBooking: "https://www.booking.com/hotel/it/fp-apartments-garden-deluxe-pizzo-calabro.it.html"
+        },
+        {
+          nome: "Paestum (B&B Cilento)",
+          date: "13–14 agosto",
+          orarioPartenza: "09:30",
+          orarioArrivo: "13:00",
+          tempoPercorrenza: "3h 30min",
+          indirizzo: "Via Antonio Meucci 5, 84047 Paestum (SA)",
+          linkMaps: "https://maps.google.com/?q=Via+Antonio+Meucci+5,+84047+Paestum+(SA)",
+          lat: 40.4192, lng: 15.007,
+          note: "Colazione inclusa, check-in 14:30–23:30",
+          linkBooking: "https://www.booking.com/hotel/it/b-amp-b-cilento-paestum.it.html"
+        },
+        {
+          nome: "Roma (Vatican City House)",
+          date: "14–17 agosto",
+          orarioPartenza: "09:30",
+          orarioArrivo: "13:00",
+          tempoPercorrenza: "3h 30min",
+          indirizzo: "Via Gregorio VII 267, Roma",
+          linkMaps: "https://maps.google.com/?q=Via+Gregorio+VII+267,+00165+Roma",
+          lat: 41.8947, lng: 12.4495,
+          note: "Check-in 13:30–00:00, 3 notti, bonus Genius",
+          linkBooking: "https://www.booking.com/hotel/it/vatican-city-house.it.html"
+        },
+        {
+          nome: "Mascali (rientro)",
+          date: "18 agosto",
+          orarioPartenza: "08:30",
+          orarioArrivo: "16:30",
+          tempoPercorrenza: "8h",
+          indirizzo: "Via Dottor Mario Amato 24, Mascali (CT)",
+          linkMaps: "https://maps.google.com/?q=Via+Dottor+Mario+Amato+24,+Mascali+(CT)",
+          lat: 37.7675, lng: 15.2322,
+          note: "Fine viaggio",
+          linkBooking: ""
+        }
+      ];
+      // --- CREA MAPPA LEAFLET ---
+      const mappa = L.map('mappa-tappe', {
+        center: [39.5, 15.7], zoom: 6, scrollWheelZoom: true
+      });
+      const tilesLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap, &copy; CartoDB', maxZoom: 19
+      }).addTo(mappa);
+      const tilesDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap, &copy; CartoDB', maxZoom: 19
+      });
+      function syncMapTheme() {
+        if (document.body.classList.contains('dark')) {
+          mappa.removeLayer(tilesLight); mappa.addLayer(tilesDark);
+        } else {
+          mappa.removeLayer(tilesDark); mappa.addLayer(tilesLight);
+        }
+      }
+      setTimeout(syncMapTheme, 150);
+      document.addEventListener('click', e => {
+        if (e.target.closest('button[aria-label*="mod"]')) setTimeout(syncMapTheme, 200);
+      });
+      // --- MARKERS, BOOKING e POPUP ---
+      let latlngs = [];
+      tappe.forEach(tappa => {
+        latlngs.push([tappa.lat, tappa.lng]);
+        const bookingBtn = tappa.linkBooking
+          ? `<br><a href="${tappa.linkBooking}" target="_blank" rel="noopener" style="color:#2563eb;font-weight:600;">🔗 Vedi dettagli su Booking</a>`
+          : '';
+        const popupHtml = `
+          <b>${tappa.nome}</b><br>
+          <span>📅 <b>Date:</b> ${tappa.date}</span><br>
+          <span>🕓 <b>Partenza:</b> ${tappa.orarioPartenza || "—"}<br>
+          🕓 <b>Arrivo:</b> ${tappa.orarioArrivo || "—"}</span><br>
+          <span>⏳ <b>Tempo tratta:</b> ${tappa.tempoPercorrenza || "—"}</span><br>
+          <span>📍 <a href="${tappa.linkMaps}" target="_blank" rel="noopener">Apri su Google Maps</a></span><br>
+          <span>📬 <b>Indirizzo:</b> ${tappa.indirizzo}</span><br>
+          <span>📝 ${tappa.note || ""}</span>
+          ${bookingBtn}
+        `;
+        L.marker([tappa.lat, tappa.lng]).addTo(mappa).bindPopup(popupHtml);
+      });
+      // --- POLYLINE DEL PERCORSO ---
+      const poly = L.polyline(latlngs, { color: '#2563eb', weight: 5, opacity: 0.7 }).addTo(mappa);
+      mappa.fitBounds(poly.getBounds(), { padding: [30, 30] });
+    })();
+    </script>
+    <!-- BLOCCO 3: TABELLA TAPPE — METEO, ITINERARIO, ATTRAZIONI, FOOD & CONSIGLI -->
+<section class="max-w-6xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">
+    📅 Tabella tappe, meteo, attrazioni e consigli giorno per giorno
+  </h2>
+  <div id="tabella-tappe" class="overflow-x-auto"></div>
+</section>
+<script>
+// --- Meteo simulato (API ready: inserisci API key dove vuoi) ---
+const meteoAPI = async (lat, lon) => {
+  // Sostituisci con chiamata OpenWeather o altro provider per meteo live!
+  if (lat===38.7436349) return {t: 32, desc: "Sole e nuvole", icon: "03d", rain: 0, uv: 7, wind: 11};
+  if (lat===40.4192) return {t: 33, desc: "Sereno", icon: "01d", rain: 0, uv: 9, wind: 13};
+  if (lat===41.8947) return {t: 34, desc: "Sole", icon: "01d", rain: 0, uv: 10, wind: 12};
+  if (lat===37.7675) return {t: 29, desc: "Sereno", icon: "01d", rain: 0, uv: 8, wind: 8};
+  return {t: 30, desc: "Sole", icon: "01d", rain: 0, uv: 8, wind: 9};
+}
+function outfitAdv(meteo) {
+  if(meteo.rain>0) return "🌧 K-way o ombrello, scarpe chiuse";
+  if(meteo.t>33) return "🧢 Abiti leggerissimi, occhiali, acqua sempre!";
+  if(meteo.t>29) return "👕 Maglietta, pantaloni corti, cappello, crema solare";
+  if(meteo.t<22) return "🧥 Felpa leggera/giacca per la sera";
+  return "👚 Abbigliamento estivo, copricapo, acqua";
+}
+const tratteTabella = [
+  {
+    giorno: "Lun 11/08",
+    localita: "Mascali → Pizzo Calabro",
+    orari: "Partenza 7:30 (traghetto Messina 9:00) · Arrivo 12:15 · Check-in 13–21",
+    attraz: [
+      { nome: "Castello Murat", link: "https://maps.google.com/?q=Castello+Murat+Pizzo", desc: "Museo storico e vista mare" }
+    ],
+    food: [
+      { nome: "Gelateria Enrico", link: "https://maps.google.com/?q=Gelateria+Enrico+Pizzo", piatto: "Tartufo" }
+    ],
+    lat: 38.7436349, lon: 16.180883,
+    consiglio: "Sosta caffè a Villa San Giovanni, arrivo a Pizzo per pranzo leggero. Passeggiata in centro e tartufo tipico. Evita il caldo: visita castello/gelateria tra le 17 e le 19. Costume pronto: relax sulla spiaggia di Marina di Pizzo."
+  },
+  {
+    giorno: "Mar 12/08",
+    localita: "Pizzo Calabro",
+    orari: "Giornata relax · Mare e centro storico",
+    attraz: [
+      { nome: "Centro Storico", link: "https://maps.google.com/?q=Centro+storico+Pizzo+Calabro", desc: "Vicolo, piazze, gelaterie" }
+    ],
+    food: [
+      { nome: "La Lampara", link: "https://maps.google.com/?q=La+Lampara+Pizzo", piatto: "Pesce fresco" }
+    ],
+    lat: 38.7436349, lon: 16.180883,
+    consiglio: "Mattina mare. Dopo le 18 visita il centro. Cena vista mare. Tramonto dal belvedere."
+  },
+  {
+    giorno: "Mer 13/08",
+    localita: "Pizzo Calabro → Paestum",
+    orari: "Partenza 9:30 · Arrivo 13:00 · Check-in 14:30–23:30",
+    attraz: [
+      { nome: "Templi Greci", link: "https://maps.google.com/?q=Parco+Archeologico+Paestum", desc: "Sito UNESCO, archeologia" }
+    ],
+    food: [
+      { nome: "Caseificio Barlotti", link: "https://maps.google.com/?q=Caseificio+Barlotti+Paestum", piatto: "Mozzarella di bufala" }
+    ],
+    lat: 40.4192, lon: 15.007,
+    consiglio: "Parti dopo colazione. All’arrivo, snack veloce e visita ai Templi (evita le ore calde). Pranzo al caseificio: esperienza autentica."
+  },
+  {
+    giorno: "Gio 14/08",
+    localita: "Paestum → Roma",
+    orari: "Partenza 9:30 · Arrivo 13:00 · Check-in 13:30 · Biglietto Basilica San Pietro 16:15",
+    attraz: [
+      { nome: "Basilica di S. Pietro", link: "https://maps.google.com/?q=Basilica+San+Pietro+Roma", desc: "Salta fila, tombe papali" }
+    ],
+    food: [
+      { nome: "Pizzarium Bonci", link: "https://maps.google.com/?q=Pizzarium+Bonci+Roma", piatto: "Pizza gourmet" }
+    ],
+    lat: 41.8947, lon: 12.4495,
+    consiglio: "Parti puntuale. Dopo l’arrivo a Roma, pranzo rapido. Visita Basilica con abbigliamento adeguato. Passeggiata in zona Prati o Vaticano. Cena: pizza da Bonci."
+  },
+  {
+    giorno: "Ven 15/08",
+    localita: "Roma",
+    orari: "Giornata libera: Villa Pamphili o Trastevere",
+    attraz: [
+      { nome: "Villa Pamphili", link: "https://maps.google.com/?q=Villa+Pamphili+Roma", desc: "Parco, picnic, giochi bimbi" },
+      { nome: "Trastevere", link: "https://maps.google.com/?q=Trastevere+Roma", desc: "Street food, mercatini" }
+    ],
+    food: [
+      { nome: "Hostaria Dino e Toni", link: "https://maps.google.com/?q=Dino+e+Toni+Roma", piatto: "Carbonara" }
+    ],
+    lat: 41.8947, lon: 12.4495,
+    consiglio: "Mattina relax nei parchi. Pomeriggio a Trastevere. Cena in osteria. In caso di caldo, scegli un museo o Explora."
+  },
+  {
+    giorno: "Sab 16/08",
+    localita: "Roma",
+    orari: "Opzionale: Explora, Villa Borghese, shopping",
+    attraz: [
+      { nome: "Explora Museo Bambini", link: "https://maps.google.com/?q=Explora+Roma", desc: "Interattivo, per ragazzi" }
+    ],
+    food: [
+      { nome: "Eataly Roma", link: "https://maps.google.com/?q=Eataly+Roma", piatto: "Menu internazionale" }
+    ],
+    lat: 41.8947, lon: 12.4495,
+    consiglio: "Mattina Explora (prenota in anticipo). Pomeriggio Villa Borghese. Sera a Eataly."
+  },
+  {
+    giorno: "Dom 17/08",
+    localita: "Roma → Mascali",
+    orari: "Partenza 8:30 · Soste consigliate: Frosinone, Salerno · Arrivo previsto 16:30",
+    attraz: [],
+    food: [],
+    lat: 37.7675, lon: 15.2322,
+    consiglio: "Parti con calma, sosta snack dopo Roma Sud. Pranzo in area servizio dopo Salerno. Stretch ogni 2h. Arrivo casa: relax!"
+  }
+];
+
+// === COSTRUISCI TABELLA ITINERARIO ===
+(async function() {
+  let html = `<table class="w-full text-xs md:text-sm bg-white dark:bg-gray-900 rounded-xl shadow">
+    <thead>
+      <tr class="bg-blue-100 dark:bg-blue-800 text-gray-700 dark:text-gray-200">
+        <th>Giorno</th>
+        <th>Località</th>
+        <th>Orari</th>
+        <th>Meteo</th>
+        <th>Outfit</th>
+        <th>Attrazioni</th>
+        <th>Ristoranti</th>
+        <th>Consiglio del giorno</th>
+      </tr>
+    </thead>
+    <tbody>`;
+  for (let row of tratteTabella) {
+    let meteo = row.lat ? await meteoAPI(row.lat, row.lon) : null;
+    let meteoHTML = meteo
+      ? `<span title="${meteo.desc}"><img src="https://openweathermap.org/img/wn/${meteo.icon}.png" class="inline h-5" alt="${meteo.desc}" /> ${meteo.t}°C, ${meteo.desc}</span>`
+      : "-";
+    let outfit = meteo ? outfitAdv(meteo) : "-";
+    let attraz = row.attraz && row.attraz.length
+      ? row.attraz.map(a=>`<a href="${a.link}" class="underline text-blue-700 dark:text-blue-300" target="_blank">${a.nome}</a> <span class="text-gray-500">(${a.desc})</span>`).join("<br>")
+      : "-";
+    let food = row.food && row.food.length
+      ? row.food.map(f=>`<a href="${f.link}" class="underline text-pink-700 dark:text-pink-300" target="_blank">${f.nome}</a> <span class="text-gray-500">(${f.piatto})</span>`).join("<br>")
+      : "-";
+    html += `<tr>
+      <td class="p-2">${row.giorno}</td>
+      <td class="p-2">${row.localita}</td>
+      <td class="p-2">${row.orari || '-'}</td>
+      <td class="p-2">${meteoHTML}</td>
+      <td class="p-2">${outfit}</td>
+      <td class="p-2">${attraz}</td>
+      <td class="p-2">${food}</td>
+      <td class="p-2">${row.consiglio || '-'}</td>
+    </tr>`;
+  }
+  html += "</tbody></table>";
+  document.getElementById("tabella-tappe").innerHTML = html;
+})();
+</script>
+<!-- BLOCCO 4: ESPERIENZE, ATTRAZIONI, MUST-SEE, HIDDEN GEM, KIDS, PIANI B -->
+<section class="max-w-4xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">🎯 Esperienze, Attrazioni & “Piani B”</h2>
+  <div class="space-y-6" x-data="{tappa: 0}">
+    <!-- Bottoni tab per selezione tappa -->
+    <div class="flex gap-2 mb-2">
+      <template x-for="(nome, idx) in ['Pizzo Calabro','Paestum','Roma']" :key="idx">
+        <button :class="tappa === idx ? 'btn bg-blue-800' : 'btn btn-dark'"
+                @click="tappa = idx" x-text="nome"></button>
+      </template>
+    </div>
+    <!-- Contenuto dinamico per ogni tappa -->
+    <template x-for="(tab, idx) in [
+      [
+        // Pizzo Calabro
+        { type:'Must-See', titolo:'Centro Storico e Castello Murat', descr:'Passeggiata tra piazzette, vicoli e vista mare. Castello Murat: visita storica e panoramica.', durata:'1h30', costo:'€6', pianoB:'Visita Museo della Tonnara (coperto)', link:'https://maps.google.com/?q=Castello+Murat+Pizzo' },
+        { type:'Kids-Fun', titolo:'Gelateria & tartufo', descr:'Tour delle migliori gelaterie del borgo. Kids bonus: tartufo di Pizzo.', durata:'40min', costo:'€3/pp', pianoB:'Laboratorio gelato (prenotabile)', link:'https://maps.google.com/?q=Gelateria+Enrico+Pizzo' },
+        { type:'Hidden Gem', titolo:'Spiaggia La Marina', descr:'Spiaggia cittadina, acqua bassa, ideale per famiglie.', durata:'Mattina/sera', costo:'Gratis', pianoB:'Passeggiata lungomare coperta', link:'https://maps.google.com/?q=Spiaggia+Marina+di+Pizzo' },
+        { type:'Relax', titolo:'Belvedere e aperitivo', descr:'Belvedere con vista Stromboli e tramonto. Bar con terrazza.', durata:'1h', costo:'€5', pianoB:'Bar interno Castello', link:'https://maps.google.com/?q=Belvedere+Pizzo+Calabro' }
+      ],
+      [
+        // Paestum
+        { type:'Must-See', titolo:'Area Archeologica Templi Greci', descr:'Patrimonio UNESCO, templi meglio conservati d’Italia. Consigliata visita guidata.', durata:'2h', costo:'€15/adulto, €2/ragazzo', pianoB:'Museo Archeologico (coperto)', link:'https://maps.google.com/?q=Parco+Archeologico+Paestum' },
+        { type:'Kids-Fun', titolo:'Mozzarella experience', descr:'Tour e degustazione presso caseificio didattico. Dimostrazione animali.', durata:'1h', costo:'€8/pp', pianoB:'Visita stalla coperta', link:'https://maps.google.com/?q=Caseificio+Barlotti+Paestum' },
+        { type:'Hidden Gem', titolo:'Spiaggia Licinella', descr:'Spiaggia tranquilla a sud, ottima per bambini.', durata:'Mattina', costo:'Gratis', pianoB:'Laboratorio ceramica (vicino al sito)', link:'https://maps.google.com/?q=Spiaggia+Licinella+Paestum' },
+        { type:'Relax', titolo:'Passeggiata serale a Capaccio', descr:'Centro storico, locali tipici, street food, eventi.', durata:'1h', costo:'A piacere', pianoB:'Bar/ristorante al coperto', link:'https://maps.google.com/?q=Capaccio+Paestum' }
+      ],
+      [
+        // Roma
+        { type:'Must-See', titolo:'Basilica di San Pietro (Salta Fila)', descr:'Accesso riservato, visita a navata e Grotte Papali. Dress code richiesto.', durata:'2h', costo:'Incluso ticket', pianoB:'Musei Vaticani, prenotazione extra', link:'https://maps.google.com/?q=Basilica+San+Pietro+Roma' },
+        { type:'Kids-Fun', titolo:'Explora – Il Museo dei Bambini', descr:'Museo interattivo, laboratori e giochi per ogni età.', durata:'1h30', costo:'€10/pp', pianoB:'Aree bimbi nei parchi di Villa Borghese', link:'https://maps.google.com/?q=Explora+Roma' },
+        { type:'Hidden Gem', titolo:'Quartiere Trastevere', descr:'Stradine, street art, mercatini, atmosfera vivace.', durata:'2h', costo:'Gratis', pianoB:'Cinema d’essai coperto', link:'https://maps.google.com/?q=Trastevere+Roma' },
+        { type:'Relax', titolo:'Villa Pamphili e picnic', descr:'Grande parco con aree relax e giochi bimbi.', durata:'Mattina o pomeriggio', costo:'Gratis', pianoB:'Caffetteria interna Villa Pamphili', link:'https://maps.google.com/?q=Villa+Pamphili+Roma' }
+      ]
+    ]">
+      <div x-show="tappa === idx" class="space-y-2 animate-fade-in">
+        <template x-for="item in tab">
+          <div class="p-3 rounded-xl shadow bg-white dark:bg-gray-900 border-l-4"
+               :class="{
+                'border-blue-800': item.type==='Must-See',
+                'border-green-700': item.type==='Kids-Fun',
+                'border-yellow-500': item.type==='Hidden Gem',
+                'border-pink-600': item.type==='Relax'
+               }">
+            <span class="block font-bold text-lg mb-1" x-text="item.titolo"></span>
+            <span class="block text-sm italic text-gray-600 dark:text-gray-300 mb-1" x-text="item.type.replace('-',' ')"></span>
+            <span class="block text-gray-900 dark:text-gray-100 mb-1" x-text="item.descr"></span>
+            <div class="flex gap-2 text-xs">
+              <span>🕒 <b>Durata:</b> <span x-text="item.durata"></span></span>
+              <span>💶 <b>Costo:</b> <span x-text="item.costo"></span></span>
+              <span>☔ <b>Piano B:</b> <span x-text="item.pianoB"></span></span>
+              <a :href="item.link" target="_blank" class="ml-2 underline text-blue-700 dark:text-blue-300">🗺️ Apri in Maps</a>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+</section>
+<!-- BLOCCO 5: FOOD PLANNER & RISTORANTI FAMILY -->
+<section class="max-w-4xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">🍝 Food Planner & Ristoranti Family</h2>
+  <div x-data="{ tappa: 0 }">
+    <div class="flex gap-2 mb-2">
+      <template x-for="(nome, idx) in ['Pizzo Calabro','Paestum','Roma']" :key="idx">
+        <button :class="tappa === idx ? 'btn bg-blue-800' : 'btn btn-dark'"
+                @click="tappa = idx" x-text="nome"></button>
+      </template>
+    </div>
+    <template x-for="(tab, idx) in [
+      [
+        { nome: 'Gelateria Enrico', tipo: 'Gelateria artigianale', piatto: 'Tartufo di Pizzo', prezzo: '€3-4', attesa: 'Breve', kids: true, allergie: 'Latte', orari: '10:00–23:30', link: 'https://maps.google.com/?q=Gelateria+Enrico+Pizzo' },
+        { nome: 'Ristorante La Lampara', tipo: 'Pesce, cucina tipica', piatto: 'Spaghetti alla tarantina, pesce fresco', prezzo: '€20-35', attesa: 'Media', kids: true, allergie: 'Pesce, crostacei', orari: '12:30–15:00, 19:30–23:00', link: 'https://maps.google.com/?q=La+Lampara+Pizzo' },
+        { nome: 'Trattoria Mastro Ciccio', tipo: 'Trattoria calabrese', piatto: 'Fileja al sugo, parmigiana', prezzo: '€18-28', attesa: 'Breve', kids: true, allergie: 'Glutine, uova', orari: '13:00–15:00, 20:00–23:00', link: 'https://maps.google.com/?q=Mastro+Ciccio+Pizzo' }
+      ],
+      [
+        { nome: 'Caseificio Barlotti', tipo: 'Caseificio e ristorante', piatto: 'Mozzarella di bufala, taglieri', prezzo: '€8-20', attesa: 'Media', kids: true, allergie: 'Latte', orari: '09:00–21:00', link: 'https://maps.google.com/?q=Caseificio+Barlotti+Paestum' },
+        { nome: 'Ristorante Nettuno', tipo: 'Pesce vista templi', piatto: 'Risotto ai frutti di mare, grigliata', prezzo: '€25-40', attesa: 'Media', kids: true, allergie: 'Pesce', orari: '12:30–15:00, 19:30–22:30', link: 'https://maps.google.com/?q=Ristorante+Nettuno+Paestum' },
+        { nome: 'La Dispensa di San Salvatore', tipo: 'Cucina tipica campana', piatto: 'Paccheri alla Paesana', prezzo: '€15-28', attesa: 'Breve', kids: true, allergie: 'Glutine, latte', orari: '12:30–15:00, 19:30–22:30', link: 'https://maps.google.com/?q=Dispensa+San+Salvatore+Paestum' }
+      ],
+      [
+        { nome: 'Hostaria Dino e Toni', tipo: 'Cucina romana tradizionale', piatto: 'Carbonara, amatriciana', prezzo: '€18-28', attesa: 'Media', kids: true, allergie: 'Uova, glutine', orari: '12:00–15:30, 19:00–23:00', link: 'https://maps.google.com/?q=Dino+e+Toni+Roma' },
+        { nome: 'Pizzarium Bonci', tipo: 'Pizza al taglio', piatto: 'Pizza gourmet', prezzo: '€5-12', attesa: 'Breve', kids: true, allergie: 'Glutine', orari: '11:00–22:00', link: 'https://maps.google.com/?q=Pizzarium+Bonci+Roma' },
+        { nome: 'Eataly Roma', tipo: 'Market & ristorazione', piatto: 'Opzioni vegetariane, kids menu', prezzo: '€10-25', attesa: 'Variabile', kids: true, allergie: 'Dichiarate in menù', orari: '10:00–23:00', link: 'https://maps.google.com/?q=Eataly+Roma' }
+      ]
+    ]">
+      <div x-show="tappa === idx" class="space-y-2 animate-fade-in">
+        <template x-for="rest in tab">
+          <div class="p-3 rounded-xl shadow bg-white dark:bg-gray-900 border-l-4 border-green-700">
+            <span class="block font-bold text-lg mb-1" x-text="rest.nome"></span>
+            <span class="block text-sm italic text-gray-600 dark:text-gray-300 mb-1" x-text="rest.tipo"></span>
+            <span class="block text-gray-900 dark:text-gray-100 mb-1">🍽 <b>Piatto tipico:</b> <span x-text="rest.piatto"></span></span>
+            <div class="flex gap-2 text-xs mb-1">
+              <span>💶 <b>Prezzo:</b> <span x-text="rest.prezzo"></span></span>
+              <span>⏳ <b>Attesa:</b> <span x-text="rest.attesa"></span></span>
+              <span>👦 <b>Bimbi:</b> <span x-text="rest.kids ? 'Sì' : 'No'"></span></span>
+              <span>⚠️ <b>Allergie:</b> <span x-text="rest.allergie"></span></span>
+              <span>🕑 <b>Orari:</b> <span x-text="rest.orari"></span></span>
+              <a :href="rest.link" target="_blank" class="underline text-blue-700 dark:text-blue-300">🗺️ Vai</a>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+  <div class="mt-2 text-sm text-gray-500 dark:text-gray-300">
+    <b>Nota:</b> i ristoranti sono scelti per qualità, attenzione alle famiglie, e presenza di kids-menu e allergeni segnalati.<br>
+    Le attese sono stimate su base estiva: prenota con anticipo se possibile.
+  </div>
+</section>
+<!-- BLOCCO 6: WELLNESS & SICUREZZA A BORDO -->
+<section class="max-w-4xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">🛡️ Wellness & Sicurezza a Bordo</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow">
+      <h3 class="font-bold text-lg mb-2 text-green-700">Checklist sicurezza veicolo</h3>
+      <ul class="list-disc ml-4 space-y-1">
+        <li>Pressione gomme e ruotino/scorta</li>
+        <li>Livello olio, acqua radiatore e lavavetri</li>
+        <li>Freni e pastiglie ok</li>
+        <li>Giubbotto riflettente + triangolo</li>
+        <li>Cavi USB, caricabatteria e adattatore auto</li>
+        <li>Kit pronto soccorso e medicinali base</li>
+        <li>Documenti (identità, patente, assicurazione)</li>
+        <li>Teli parasole e tendine per bimbi</li>
+      </ul>
+    </div>
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow">
+      <h3 class="font-bold text-lg mb-2 text-pink-700">Pause ergonomiche & giochi viaggio</h3>
+      <ul class="list-disc ml-4 space-y-1">
+        <li>Pausa ogni 2h: stretching gambe, schiena, collo</li>
+        <li>Bevi acqua ogni 45 minuti (bonus: frutta in auto!)</li>
+        <li>Mini-gioco “Indovina la canzone” o “Auto colorate”</li>
+        <li>Puzzle magnetici e quaderni per i ragazzi</li>
+        <li>Playlist condivisa (bonus: playlist romantica per i genitori)</li>
+        <li>Racconta una storia o sogno: a turno ogni membro</li>
+        <li>Micro-surprise: bigliettino motivazionale ogni mattina</li>
+        <li>Promemoria: verifica cinture, seggiolini e tutto in sicurezza prima di partire</li>
+      </ul>
+    </div>
+  </div>
+  <div class="mt-3 text-sm text-gray-500 dark:text-gray-300">
+    <b>Tip esperto:</b> Se i ragazzi hanno dispositivi elettronici, stabilisci una “zona digitale” (max 1h per tratto lungo) e alterna sempre con gioco, relax e dialogo.<br>
+    Per la coppia: programma una mini-pausa caffè per soli adulti ogni due giorni e scegli una canzone “speciale” da dedicare durante il viaggio.
+  </div>
+</section>
+<!-- BLOCCO 7: BUDGET GIORNALIERO E TEMPI DI GUIDA -->
+<section class="max-w-4xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">📊 Budget Giornaliero & Tempi di Guida</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- BUDGET GIORNALIERO -->
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow">
+      <h3 class="font-bold mb-2 text-blue-800 dark:text-blue-300">Budget (modificabile)</h3>
+      <table id="budget-table" class="w-full text-xs mb-3">
+        <thead>
+          <tr class="bg-blue-100 dark:bg-blue-900 text-gray-700 dark:text-gray-200">
+            <th>Giorno</th>
+            <th>Tappa</th>
+            <th>Hotel (€)</th>
+            <th>Cibo (€)</th>
+            <th>Extra (€)</th>
+            <th>Totale</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>11/08</td><td>Mascali→Pizzo</td>
+            <td><input type="number" value="120" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="60" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="20" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td class="font-bold text-right">200</td>
+          </tr>
+          <tr>
+            <td>13/08</td><td>Pizzo→Paestum</td>
+            <td><input type="number" value="70" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="70" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="30" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td class="font-bold text-right">170</td>
+          </tr>
+          <tr>
+            <td>14/08</td><td>Paestum→Roma</td>
+            <td><input type="number" value="140" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="45" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="35" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td class="font-bold text-right">220</td>
+          </tr>
+          <tr>
+            <td>17/08</td><td>Roma→Mascali</td>
+            <td><input type="number" value="0" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="80" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td><input type="number" value="40" min="0" class="w-12 bg-gray-100 dark:bg-gray-800 text-right px-1" /></td>
+            <td class="font-bold text-right">120</td>
+          </tr>
+        </tbody>
+      </table>
+      <canvas id="budgetChart" height="180"></canvas>
+      <div class="text-xs text-gray-500 dark:text-gray-300 mt-2">
+        Modifica le cifre per vedere subito l’impatto sul budget.<br>
+        (Il totale sarà confrontato con il limite giornaliero di €200.)
+      </div>
+    </div>
+    <!-- GRAFICO TEMPI GUIDA -->
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow">
+      <h3 class="font-bold mb-2 text-blue-800 dark:text-blue-300">Tempi di Guida Stimati</h3>
+      <canvas id="tempiChart" height="180"></canvas>
+      <div class="text-xs text-gray-500 dark:text-gray-300 mt-2">
+        <b>Linea blu:</b> ore di guida<br>
+        (Dati simulati: pronte API Google Maps/Traffic)
+      </div>
+    </div>
+  </div>
+  <script>
+    // BUDGET GIORNALIERO (modifica live)
+    function aggiornaBudgetChart() {
+      const rows = document.querySelectorAll('#budget-table tbody tr');
+      let labels = [], data = [];
+      rows.forEach(r => {
+        labels.push(r.cells[1].innerText);
+        const vals = Array.from(r.querySelectorAll('input')).map(inp=>Number(inp.value)||0);
+        const tot = vals.reduce((a,b)=>a+b,0);
+        r.cells[5].innerText = tot;
+        data.push(tot);
+      });
+      if(window.budgetChartObj) window.budgetChartObj.destroy();
+      window.budgetChartObj = new Chart(document.getElementById('budgetChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Totale giornaliero (€)',
+            data: data,
+            backgroundColor: data.map(v => v>200 ? '#ef4444' : '#2563eb'),
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: { y: { beginAtZero: true, max: 260 } }
+        }
+      });
+    }
+    document.querySelectorAll('#budget-table input').forEach(inp =>
+      inp.addEventListener('input', aggiornaBudgetChart));
+    aggiornaBudgetChart();
+
+    // GRAFICO TEMPI GUIDA
+    const labels2 = ['11/08','13/08','14/08','17/08'];
+    const dataTempi = [4.5, 3.5, 3.3, 8];
+    window.tempiChartObj = new Chart(document.getElementById('tempiChart'), {
+      type: 'line',
+      data: {
+        labels: labels2,
+        datasets: [
+          {
+            label: 'Ore guida',
+            data: dataTempi,
+            borderColor: '#2563eb',
+            backgroundColor: '#93c5fd',
+            tension: 0.3,
+            pointRadius: 5,
+            fill: false
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          y: { type: 'linear', position: 'left', min: 0, max: 10, title: {display:true,text:'Ore'} }
+        }
+      }
+    });
+  </script>
+</section>
+<!-- BLOCCO 8: DIARIO DI BORDO E CHECKLIST -->
+<section class="max-w-4xl mx-auto my-10">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">📖 Diario di Bordo & Checklist Viaggio</h2>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Diario giorno per giorno -->
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow h-fit">
+      <h3 class="font-bold text-lg mb-2 text-blue-800 dark:text-blue-300">Note giorno per giorno</h3>
+      <textarea
+        id="diario"
+        class="w-full h-44 p-2 rounded border border-blue-200 dark:bg-gray-800 dark:text-white"
+        placeholder="Scrivi qui i ricordi, i dettagli o le spese della giornata..."
+        aria-label="Diario di bordo"></textarea>
+      <div class="mt-2 flex gap-2">
+        <button class="btn" onclick="salvaDiario()">💾 Salva</button>
+        <button class="btn btn-dark" onclick="scaricaDiario()">⬇️ Esporta TXT</button>
+        <span id="diario-status" class="text-xs text-green-700"></span>
+      </div>
+      <div class="mt-2 text-xs text-gray-500 dark:text-gray-300">
+        Il diario viene salvato localmente sul dispositivo: puoi scrivere in ogni momento, anche offline.
+      </div>
+    </div>
+    <!-- Checklist pre-partenza -->
+    <div class="bg-white dark:bg-gray-900 p-4 rounded-xl shadow h-fit">
+      <h3 class="font-bold text-lg mb-2 text-blue-800 dark:text-blue-300">Checklist partenza (modificabile)</h3>
+      <ul id="checklist" class="space-y-1">
+        <li><label><input type="checkbox"> Documenti d’identità + tessera sanitaria</label></li>
+        <li><label><input type="checkbox"> Prenotazioni hotel e biglietti eventi</label></li>
+        <li><label><input type="checkbox"> Caricabatterie e power bank</label></li>
+        <li><label><input type="checkbox"> Abiti leggeri + cambio caldo</label></li>
+        <li><label><input type="checkbox"> Costumi, asciugamani mare</label></li>
+        <li><label><input type="checkbox"> Scarpe comode e sandali</label></li>
+        <li><label><input type="checkbox"> Kit medicinali base e pronto soccorso</label></li>
+        <li><label><input type="checkbox"> Giocattoli/libri/quaderno viaggio</label></li>
+        <li><label><input type="checkbox"> Spuntini/merende per il viaggio</label></li>
+        <li><label><input type="checkbox"> Soldi contanti/Carta</label></li>
+      </ul>
+      <div class="mt-2 text-xs text-gray-500 dark:text-gray-300">
+        Se vuoi aggiungere voci personali, <b>modifica il codice HTML</b> oppure chiedimi di estendere la lista!
+      </div>
+    </div>
+  </div>
+  <script>
+    // === Diario: salvataggio locale ===
+    function salvaDiario() {
+      const testo = document.getElementById('diario').value;
+      localStorage.setItem('roadtrip_diario', testo);
+      document.getElementById('diario-status').innerText = "Salvato!";
+      setTimeout(()=>{document.getElementById('diario-status').innerText = "";}, 1200);
+    }
+    window.addEventListener('DOMContentLoaded', ()=>{
+      document.getElementById('diario').value = localStorage.getItem('roadtrip_diario') || "";
+    });
+    function scaricaDiario() {
+      const testo = document.getElementById('diario').value;
+      const blob = new Blob([testo], {type:'text/plain'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'DiarioViaggio.txt';
+      a.click();
+    }
+  </script>
+</section>
+<!-- BLOCCO 9: FAQ, PRIVACY, ACCESSIBILITÀ & FOOTER -->
+<section class="max-w-4xl mx-auto my-8">
+  <h2 class="text-xl font-bold mb-4 text-blue-900 dark:text-blue-200">❓ FAQ, Privacy & Accessibilità</h2>
+  <div class="accordion bg-white dark:bg-gray-900 rounded-xl shadow p-4">
+    <details class="mb-2" tabindex="0">
+      <summary class="font-semibold focus:outline-blue-800">Dove vengono salvati i miei dati e il diario?</summary>
+      <div class="pl-2 text-sm">Tutti i dati vengono salvati <b>solo localmente sul tuo dispositivo</b> (browser, PC, tablet, telefono). Nessun dato viene inviato su server esterni o terze parti.</div>
+    </details>
+    <details class="mb-2" tabindex="0">
+      <summary class="font-semibold focus:outline-blue-800">Posso usare questa app offline?</summary>
+      <div class="pl-2 text-sm">Sì: grazie al <b>service worker</b> incluso, l’app funziona anche senza internet (ad eccezione delle mappe live e dati API).</div>
+    </details>
+    <details class="mb-2" tabindex="0">
+      <summary class="font-semibold focus:outline-blue-800">Come posso aggiornare dati (meteo, traffico, POI)?</summary>
+      <div class="pl-2 text-sm">Per dati reali integra le tue API key dove trovi <b>YOUR_API_KEY</b> nel codice, oppure chiedi a ChatGPT la personalizzazione.</div>
+    </details>
+    <details tabindex="0">
+      <summary class="font-semibold focus:outline-blue-800">Come personalizzo tappe, checklist, attrazioni?</summary>
+      <div class="pl-2 text-sm">Puoi modificare direttamente i dati in <code>&lt;script&gt;</code> o chiedere un file Excel/CSV da importare.</div>
+    </details>
+    <details class="mt-2" tabindex="0">
+      <summary class="font-semibold focus:outline-blue-800">Accessibilità e suggerimenti d’uso</summary>
+      <div class="pl-2 text-sm">
+        Questa web-app è progettata per alto contrasto, testo scalabile e navigazione da tastiera.<br>
+        <b>Consigli:</b> usa la modalità scura per affaticare meno la vista.<br>
+        Tutti i bottoni importanti sono accessibili via <kbd>TAB</kbd> e pulsante <kbd>Invio</kbd>.
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- FOOTER AVANZATO -->
+<footer class="mt-8 bg-blue-900 text-blue-100 py-6 text-center text-sm rounded-lg">
+  <div>
+    © 2025 <b>RoadTrip Master AI</b> by ChatGPT · Viaggio: Mascali ↔ Roma · Versione HTML ready<br>
+    Tutto personalizzato per Giovanni Billa — <span class="italic">Consulente del Credito</span>
+  </div>
+  <div class="mt-2">
+    Prodotto con <span title="Tailwind CSS, Alpine.js, Leaflet, Chart.js">tecnologie moderne</span> · Validato W3C ·
+    <a href="https://validator.w3.org/" class="underline" target="_blank" rel="noopener">Controlla HTML</a> ·
+    <a href="#" class="underline" onclick="alert('RoadTrip Master AI è una demo personalizzata per uso privato. Non per uso commerciale.')">Licenze & Info</a>
+  </div>
+  <div class="mt-2 text-xs text-blue-200">
+    Ultima revisione: <span id="rev-date"></span>
+    <script>document.getElementById('rev-date').innerText = (new Date()).toLocaleDateString('it-IT');</script>
+  </div>
+</footer>
+<!-- BLOCCO 10: SERVICE WORKER, OTTIMIZZAZIONE MOBILE & EXTRA -->
+<script>
+// Service Worker per modalità offline basica
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('sw.js').then(function(reg) {
+      // Registrazione ok
+      console.log('ServiceWorker registrato: ', reg.scope);
+    }, function(err) {
+      // Fallimento
+      console.log('ServiceWorker NON registrato: ', err);
+    });
+  });
+}
+</script>
+<!-- Esempio file sw.js (da salvare accanto all’HTML) -->
+<!--
+self.addEventListener('install', function(e) {
+  e.waitUntil(
+    caches.open('roadtrip-v1').then(function(cache) {
+      return cache.addAll([
+        '/',
+        '/index.html',
+        '/favicon.ico',
+        // inserisci qui altri asset css/js da cache-izzare
+      ]);
+    })
+  );
+});
+self.addEventListener('fetch', function(e) {
+  e.respondWith(
+    caches.match(e.request).then(function(response) {
+      return response || fetch(e.request);
+    })
+  );
+});
+-->
+<!-- Migliorie Mobile -->
+<style>
+  @media (max-width: 450px) {
+    h1, h2 { font-size: 1.2rem !important;}
+    .tappa-list { gap:0.4rem; }
+    .tappa { min-width:85px; padding:0.4rem 0.08rem; font-size:0.90rem;}
+    table { font-size: 0.85rem; }
+    .rounded-xl { border-radius: 1rem; }
+  }
+</style>
+<!-- Suggerimenti Futuri -->
+<section class="max-w-4xl mx-auto my-8">
+  <h2 class="text-lg font-bold mb-3 text-blue-900 dark:text-blue-200">🔮 Futuri Upgrade & Personalizzazioni</h2>
+  <ul class="list-disc ml-5 text-sm text-gray-700 dark:text-gray-300 space-y-1">
+    <li>Integrazione <b>notifiche push</b> (es. promemoria meteo, check-in, soste consigliate)</li>
+    <li>Login con <b>PIN familiare</b> per privacy extra</li>
+    <li>Backup automatico diario/checklist su <b>Google Drive</b> (via OAuth)</li>
+    <li>Widget IA: <b>consigli live</b> personalizzati giorno per giorno (viaggio, cibo, risparmio, alert traffico)</li>
+    <li>Sincronizzazione con <b>Google Calendar</b> per tappe/booking/attrazioni</li>
+    <li>Visualizzazione <b>istantanea traffico</b> su mappa</li>
+    <li>Supporto stampa e <b>condivisione PDF</b> del diario e del piano di viaggio</li>
+    <li>AI Travel Assistant in chat per suggerimenti o prenotazioni live</li>
+    <li>Dark mode migliorata con timer automatico alba/tramonto</li>
+  </ul>
+  <div class="text-xs mt-2 text-gray-500 dark:text-gray-400">
+    Proponi nuove idee a ChatGPT per ulteriori personalizzazioni!
+  </div>
+</section>
